@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Staff Engineer System Design — Learning Roadmap</title>
+<style>
+  :root {
+    --bg: #0d1117; --surface: #161b22; --border: #30363d;
+    --text: #c9d1d9; --text-muted: #8b949e; --accent: #58a6ff;
+    --green: #3fb950; --orange: #d29922; --red: #f85149; --purple: #bc8cff;
+    --cyan: #39d353;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace; background: var(--bg); color: var(--text); padding: 20px; line-height: 1.6; }
+  h1 { color: var(--accent); font-size: 1.4em; margin-bottom: 4px; }
+  h2 { color: var(--purple); font-size: 1.15em; margin: 28px 0 12px; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+  h3 { color: var(--orange); font-size: 1em; margin: 16px 0 8px; }
+  .subtitle { color: var(--text-muted); font-size: 0.85em; margin-bottom: 24px; }
+
+  /* Progress Bar */
+  .progress-bar-container { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px 18px; margin: 16px 0 24px; }
+  .progress-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .progress-header span { font-size: 0.9em; color: var(--text-muted); }
+  .progress-header .pct { color: var(--green); font-weight: bold; font-size: 1.1em; }
+  .progress-track { background: var(--border); border-radius: 4px; height: 8px; overflow: hidden; }
+  .progress-fill { background: linear-gradient(90deg, var(--green), var(--cyan)); height: 100%; border-radius: 4px; transition: width 0.4s ease; }
+  .phase-progress { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 12px; }
+  .phase-stat { text-align: center; font-size: 0.78em; }
+  .phase-stat .count { font-weight: bold; font-size: 1.1em; }
+  .phase-stat .label { color: var(--text-muted); }
+
+  /* Mindmap */
+  .mindmap { display: flex; flex-direction: column; gap: 0; margin: 20px 0; }
+  .mm-root { background: linear-gradient(135deg, #1a1e2e, #1e2740); border: 2px solid var(--accent); border-radius: 8px; padding: 14px 20px; text-align: center; font-weight: bold; color: var(--accent); font-size: 1.1em; max-width: 400px; margin: 0 auto; }
+  .mm-connector { text-align: center; color: var(--border); font-size: 1.2em; line-height: 1; padding: 2px 0; }
+  .mm-branches { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; margin: 8px 0; }
+  .mm-branch { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 12px 14px; transition: border-color 0.2s; }
+  .mm-branch:hover { border-color: var(--accent); }
+  .mm-branch-title { font-weight: bold; margin-bottom: 6px; font-size: 0.95em; }
+  .mm-branch-title .phase { font-size: 0.75em; padding: 2px 6px; border-radius: 3px; margin-right: 6px; }
+  .p1 { background: #1a3a1a; color: var(--green); }
+  .p2 { background: #3a2a1a; color: var(--orange); }
+  .p3 { background: #3a1a2a; color: var(--red); }
+  .p4 { background: #2a1a3a; color: var(--purple); }
+  .mm-items { list-style: none; padding-left: 12px; }
+  .mm-items li { color: var(--text-muted); font-size: 0.82em; padding: 2px 0; position: relative; padding-left: 14px; }
+  .mm-items li::before { content: '├─'; position: absolute; left: 0; color: var(--border); }
+  .mm-items li:last-child::before { content: '└─'; }
+  .mm-items li.done { color: var(--green); text-decoration: line-through; opacity: 0.6; }
+
+  /* Sequential Flow */
+  .flow { margin: 20px 0; }
+  .phase-block { margin-bottom: 24px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .phase-header { padding: 10px 16px; font-weight: bold; font-size: 0.95em; display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none; }
+  .phase-header:hover { background: rgba(255,255,255,0.03); }
+  .phase-header .arrow { transition: transform 0.2s; }
+  .phase-header.collapsed .arrow { transform: rotate(-90deg); }
+  .phase-count { margin-left: auto; font-size: 0.78em; color: var(--text-muted); font-weight: normal; }
+  .phase-body { padding: 0 16px 14px; }
+  .phase-body.hidden { display: none; }
+  .week-label { color: var(--cyan); font-size: 0.8em; font-weight: bold; margin: 10px 0 4px; }
+  .topic-row { display: grid; grid-template-columns: 30px 1fr 200px 140px; gap: 8px; align-items: start; padding: 5px 0; border-bottom: 1px solid rgba(48,54,61,0.5); font-size: 0.82em; }
+  .topic-row:last-child { border-bottom: none; }
+  .topic-num { color: var(--text-muted); text-align: right; }
+  .topic-name { color: var(--text); }
+  .topic-name .tag { font-size: 0.7em; padding: 1px 5px; border-radius: 2px; margin-left: 4px; }
+  .tag-mobile { background: #1a2a3a; color: var(--accent); }
+  .tag-backend { background: #2a1a3a; color: var(--purple); }
+  .tag-both { background: #1a3a2a; color: var(--green); }
+  .topic-resource { color: var(--text-muted); font-size: 0.78em; }
+  .topic-resource a { color: var(--accent); text-decoration: none; }
+  .topic-resource a:hover { text-decoration: underline; }
+  .topic-status { font-size: 0.78em; cursor: pointer; user-select: none; padding: 2px 8px; border-radius: 4px; transition: all 0.2s; text-align: center; }
+  .topic-status:hover { background: rgba(255,255,255,0.05); }
+  .status-not_started { color: var(--text-muted); }
+  .status-in_progress { color: var(--orange); }
+  .status-done { color: var(--green); font-weight: bold; }
+
+  /* Legend */
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; margin: 12px 0 20px; font-size: 0.8em; }
+  .legend span { display: flex; align-items: center; gap: 4px; }
+  .legend .dot { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+
+  /* Books */
+  .book-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 10px; margin: 10px 0; }
+  .book-card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 10px 14px; font-size: 0.82em; }
+  .book-card .title { color: var(--accent); font-weight: bold; }
+  .book-card .author { color: var(--text-muted); font-size: 0.9em; }
+  .book-card .use { color: var(--orange); margin-top: 4px; font-size: 0.9em; }
+
+  .note { background: rgba(88,166,255,0.08); border-left: 3px solid var(--accent); padding: 8px 12px; margin: 10px 0; font-size: 0.82em; color: var(--text-muted); border-radius: 0 4px 4px 0; }
+
+  .status-legend { display: flex; gap: 18px; margin: 8px 0 4px; font-size: 0.8em; color: var(--text-muted); }
+
+  /* Export bar */
+  .export-bar { display: flex; gap: 10px; margin: 16px 0; }
+  .export-bar button { background: var(--surface); border: 1px solid var(--border); color: var(--accent); padding: 6px 14px; border-radius: 4px; cursor: pointer; font-family: inherit; font-size: 0.8em; transition: all 0.2s; }
+  .export-bar button:hover { background: rgba(88,166,255,0.1); border-color: var(--accent); }
+
+  @media (max-width: 700px) {
+    .topic-row { grid-template-columns: 24px 1fr 100px; }
+    .topic-resource { display: none; }
+    .mm-branches { grid-template-columns: 1fr; }
+    .phase-progress { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<h1>Staff Engineer System Design — Learning Roadmap</h1>
+<p class="subtitle">Mobile + Backend · Sequential Learning Path · Vishesh</p>
+
+<!-- PROGRESS BAR -->
+<div class="progress-bar-container">
+  <div class="progress-header">
+    <span>Overall Progress</span>
+    <span class="pct" id="overall-pct">0 / 54</span>
+  </div>
+  <div class="progress-track"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+  <div class="phase-progress">
+    <div class="phase-stat"><div class="count" style="color:var(--green)" id="p1-count">0/12</div><div class="label">P1 Foundations</div></div>
+    <div class="phase-stat"><div class="count" style="color:var(--orange)" id="p2-count">0/15</div><div class="label">P2 Core</div></div>
+    <div class="phase-stat"><div class="count" style="color:var(--red)" id="p3-count">0/16</div><div class="label">P3 Advanced</div></div>
+    <div class="phase-stat"><div class="count" style="color:var(--purple)" id="p4-count">0/11</div><div class="label">P4 Staff</div></div>
+  </div>
+</div>
+
+<div class="status-legend">
+  <span>Click status to cycle: <span style="color:var(--text-muted)">○ not started</span> → <span style="color:var(--orange)">◑ in progress</span> → <span style="color:var(--green)">● done</span></span>
+</div>
+
+<div class="export-bar">
+  <button onclick="exportJSON()">Export progress.json</button>
+  <button onclick="resetAll()">Reset All</button>
+</div>
+
+<div class="legend">
+  <span><span class="dot" style="background:var(--accent)"></span> Mobile</span>
+  <span><span class="dot" style="background:var(--purple)"></span> Backend</span>
+  <span><span class="dot" style="background:var(--green)"></span> Both</span>
+  <span><span class="dot p1" style="padding:1px 5px">P1</span> Foundation</span>
+  <span><span class="dot p2" style="padding:1px 5px">P2</span> Core</span>
+  <span><span class="dot p3" style="padding:1px 5px">P3</span> Advanced</span>
+  <span><span class="dot p4" style="padding:1px 5px">P4</span> Staff-Level</span>
+</div>
+
+<!-- ========== MINDMAP ========== -->
+<h2>Mindmap — Topic Universe</h2>
+
+<div class="mindmap">
+  <div class="mm-root">Staff System Design Mastery</div>
+  <div class="mm-connector">│<br>├──────────┬──────────┬──────────┤</div>
+  <div class="mm-branches">
+
+    <div class="mm-branch">
+      <div class="mm-branch-title"><span class="phase p1">P1</span> Foundations (Weeks 1–3)</div>
+      <ul class="mm-items" data-phase="P1">
+        <li data-t="1">Networking: HTTP/1.1→2→3, gRPC, WebSocket, SSE</li>
+        <li data-t="2">REST vs GraphQL vs gRPC trade-offs</li>
+        <li data-t="3">Data serialization: JSON, Protobuf, FlatBuffers</li>
+        <li data-t="4">Caching fundamentals: LRU, LFU, TTL strategies</li>
+        <li data-t="5">Database basics: SQL vs NoSQL, indexing, sharding</li>
+        <li data-t="6">CAP theorem & PACELC — real implications</li>
+        <li data-t="7">Mobile: App lifecycle, process death, state restoration</li>
+        <li data-t="8">Mobile: Threading models (GCD, Coroutines, Rx)</li>
+      </ul>
+    </div>
+
+    <div class="mm-branch">
+      <div class="mm-branch-title"><span class="phase p2">P2</span> Core Patterns (Weeks 4–7)</div>
+      <ul class="mm-items" data-phase="P2">
+        <li data-t="13">Client-side architecture: MVI/MVVM/Clean arch</li>
+        <li data-t="14">Pagination: Cursor vs Offset, infinite scroll</li>
+        <li data-t="15">Image loading pipeline: decode, cache, display</li>
+        <li data-t="16">Offline-first: CRDT, event sourcing, sync strategies</li>
+        <li data-t="17">Backend: Load balancing (L4 vs L7, consistent hashing)</li>
+        <li data-t="18">Backend: Message queues (Kafka, RabbitMQ patterns)</li>
+        <li data-t="19">Backend: Rate limiting (token bucket, sliding window)</li>
+        <li data-t="20">Backend: CDN architecture & cache invalidation</li>
+        <li data-t="21">API design: versioning, pagination, idempotency</li>
+        <li data-t="22">Notification systems: Push (APNs/FCM), local, in-app</li>
+      </ul>
+    </div>
+
+    <div class="mm-branch">
+      <div class="mm-branch-title"><span class="phase p3">P3</span> Advanced Systems (Weeks 8–11)</div>
+      <ul class="mm-items" data-phase="P3">
+        <li data-t="28">Distributed consensus: Raft, Paxos (conceptual)</li>
+        <li data-t="29">Event-driven architecture & CQRS</li>
+        <li data-t="30">Search systems: inverted index, ranking, Elasticsearch</li>
+        <li data-t="31">Real-time systems: chat, presence, typing indicators</li>
+        <li data-t="32">Video/audio streaming: HLS, adaptive bitrate, WebRTC</li>
+        <li data-t="33">Mobile: Deep linking, universal links, app indexing</li>
+        <li data-t="34">Mobile: Performance — startup time, jank, memory</li>
+        <li data-t="35">Backend: Distributed transactions (Saga, 2PC)</li>
+        <li data-t="36">Backend: Observability — metrics, tracing, logging</li>
+        <li data-t="37">Backend: Database replication & consistency models</li>
+      </ul>
+    </div>
+
+    <div class="mm-branch">
+      <div class="mm-branch-title"><span class="phase p4">P4</span> Staff-Level Thinking (Weeks 12–14)</div>
+      <ul class="mm-items" data-phase="P4">
+        <li data-t="44">Cross-functional system design (mobile ↔ backend)</li>
+        <li data-t="45">Feature flagging & experimentation infra</li>
+        <li data-t="46">Migration strategies: strangler fig, blue-green</li>
+        <li data-t="47">Multi-region / geo-distributed architectures</li>
+        <li data-t="48">Cost modeling & capacity planning</li>
+        <li data-t="49">Security: OAuth2, mTLS, cert pinning, E2E encryption</li>
+        <li data-t="50">ML systems: feature store, model serving, A/B</li>
+        <li data-t="51">Technical decision frameworks & RFC writing</li>
+        <li data-t="52">Dependency management at scale (mobile SDKs)</li>
+        <li data-t="53">Build systems, CI/CD, modularization strategy</li>
+      </ul>
+    </div>
+
+  </div>
+</div>
+
+<!-- ========== SEQUENTIAL FLOW ========== -->
+<h2>Sequential Learning Flow — Read in This Order</h2>
+
+<div class="note">Each topic has a primary resource + fallback. Click the status indicator to cycle: ○ → ◑ → ●. Progress is saved in your browser. Use "Export progress.json" to share state with Claude in Cowork sessions.</div>
+
+<div class="flow">
+
+<!-- PHASE 1 -->
+<div class="phase-block">
+  <div class="phase-header" onclick="toggle(this)">
+    <span class="arrow">▼</span>
+    <span style="color:var(--green)">PHASE 1 — Foundations (Weeks 1–3)</span>
+    <span class="phase-count" id="p1-header-count"></span>
+  </div>
+  <div class="phase-body">
+    <div class="week-label">Week 1 — Networking & Protocols</div>
+    <div class="topic-row"><div class="topic-num">1</div><div class="topic-name">HTTP/1.1 → HTTP/2 → HTTP/3 evolution <span class="tag tag-both">both</span></div><div class="topic-resource">📖 DDIA Ch.1 | <a href="https://web.dev/articles/performance-http2" target="_blank">web.dev HTTP/2</a></div><div class="topic-status status-not_started" data-topic="1" onclick="cycleStatus(this)">○ not started</div></div>
+    <div class="topic-row"><div class="topic-num">2</div><div class="topic-name">REST vs GraphQL vs gRPC — when to pick which <span class="tag tag-both">both</span></div><div class="topic-resource">📖 DDIA Ch.4 | <a href="https://www.techinterviewhandbook.org/system-design/" target="_blank">Tech Interview HB</a></div><div class="topic-status status-not_started" data-topic="2" onclick="cycleStatus(this)">○ not started</div></div>
+    <div class="topic-row"><div class="topic-num">3</div><div class="topic-name">WebSocket vs SSE vs Long Polling <span class="tag tag-both">both</span></div><div class="topic-resource">🧠 Collate: bi-directional vs uni-directional, connection limits, battery</div><div class="topic-status status-not_started" data-topic="3" onclick="cycleStatus(this)">○ not started</div></div>
+    <div class="topic-row"><div class="topic-num">4</div><div class="topic-name">Data serialization: JSON, Protobuf, FlatBuffers <span class="tag tag-both">both</span></div><div class="topic-resource">📖 DDIA Ch.4 "Formats for Encoding Data"</div><div class="topic-status status-not_started" data-topic="4" onclick="cycleStatus(this)">○ not started</div></div>
+
+    <div class="week-label">Week 2 — Storage & Caching Fundamentals</div>
+    <div class="topic-row"><div class="topic-num">5</div><div class="topic-name">SQL vs NoSQL — data modeling trade-offs <span class="tag tag-backend">backend</span></div><div class="topic-resource">📖 DDIA Ch.2-3 | Alex Xu Vol.1 Ch.1-3</div><div class="topic-status status-not_started" data-topic="5" onclick="cycleStatus(this)">○ not started</div></div>
+    <div class="topic-row"><div class="topic-num">6</div><div class="topic-name">Indexing strategies: B-Tree, LSM-Tree, hash indexes <span class="tag tag-backend">backend</span></div><div class="topic-resource">📖 DDIA Ch.3</div><div class="topic-status status-not_started" data-topic="6" onclick="cycleStatus(this)">○ not started</div></div>
+    <div class="topic-row"><div class="topic-num">7</div><div class="topic-name">Caching: LRU/LFU, write-through/write-back/write-around <span class="tag tag-both">both</span></div><div class="topic-resource">📖 Alex Xu Vol.1 Ch.6 | 🧠 cache stampede, thundering herd</div><div class="topic-status status-not_started" data-topic="7" onclick="cycleStatus(this)">○ not started</div></div>
+    <div class="topic-row"><div class="topic-num">8</div><div class="topic-name">CAP theorem & PACELC — beyond the textbook <span class="tag tag-backend">backend</span></div><div class="topic-resource">📖 DDIA Ch.9 | 🧠 why CAP is misunderstood, real-world partitions</div><div class="topic-status status-not_started" data-topic="8" onclick="cycleStatus(this)">○ not started</div></div>
+
+    <div class="week-label">Week 3 — Mobile Platform Fundamentals</div>
+    <div class="topic-row"><div class="topic-num">9</div><div class="topic-name">App lifecycle, process death, state restoration <span class="tag tag-mobile">mobile</span></div><div class="topic-resource">📖 Manuel Vivo Ch.1-2 | <a href="https://github.com/weeeBox/mobile-system-design" target="_blank">weeeBox/mobile-system-design</a></div><div class="topic-status status-not_started" data-topic="9" onclick="cycleStatus(this)">○ not started</div></div>
+    <div class="topic-row"><div class="topic-num">10</div><div class="topic-name">Threading models: GCD, Kotlin Coroutines, Rx <span class="tag tag-mobile">mobile</span></div><div class="topic-resource">📖 Mobile System Design | 🧠 structured concurrency, backpressure</div><div class="topic-status status-not_started" data-topic="10" onclick="cycleStatus(this)">○ not started</div></div>
+    <div class="topic-row"><div class="topic-num">11</div><div class="topic-name">Local storage: SQLite/Room, CoreData, DataStore, MMKV <span class="tag tag-mobile">mobile</span></div><div class="topic-resource">🧠 when to use each, performance benchmarks, encryption at rest</div><div class="topic-status status-not_started" data-topic="11" onclick="cycleStatus(this)">○ not started</div></div>
+    <div class="topic-row"><div class="topic-num">12</div><div class="topic-name">Dependency injection patterns on mobile <span class="tag tag-mobile">mobile</span></div><div class="topic-resource">🧠 Hilt/Dagger vs Koin vs manual DI, compile-time vs runtime</div><div class="topic-status status-not_started" data-topic="12" onclick="cycleStatus(this)">○ not started</div></div>
+  </div>
+</div>
+
+<!-- PHASE 2 -->
+<div class="phase-block">
+  <div class="phase-header" onclick="toggle(this)">
+    <span class="arrow">▼</span>
+    <span style="color:var(--orange)">PHASE 2 — Core Design Patterns (Weeks 4–7)</span>
+    <span class="phase-count" id="p2-header-count"></span>
+  </div>
+  <div class="phase-body">
+    <div class="week-label">Week 4 — Client Architecture & Data Flow</div>
+    <div class="topic-row"><div class="topic-num">13</div><div class="topic-name">MVI / MVVM / Clean Architecture — trade-offs, not dogma <span class="tag tag-mobile">mobile</span></div><div class="topic-resource">📖 Mobile System Design Ch.3 | <a href="https://manuelvivo.dev/mobilesystemdesign/" target="_blank">manuelvivo.dev</a></div><div class="topic-status status-not_started" data-topic="13" onclick="cycleStatus(this)">○ not started</div></div>
+    <div class="topic-row"><div class="topic-num">14</div><div class="topic-name">Unidirectional data flow & reactive streams <span class="tag tag-mobile">mobile</span></div><div class="topic-resource">🧠 StateFlow vs SharedFlow, Combine publishers, backpressure</div><div class="topic-status status-not_started" data-topic="14" onclick="cycleStatus(this)">○ not started</div></div>
+    <div class="topic-row"><div class="topic-num">15</div><div class="topic-name">Pagination: cursor vs offset, keyset, infinite scroll <span class="tag tag-both">both</span></div><div class="topic-resource">📖 Alex Xu Vol.1 | 🧠 relay-style cursor, mobile prefetch</div><div class="topic-status status-not_started" data-topic="15" onclick="cycleStatus(this)">○ not started</div></div>
+    <div class="topic-row"><div class="topic-num">16</div><div class="topic-name">Image loading pipeline: decode → cache → display <span class="tag tag-mobile">mobile</span></div><div class="topic-resource">🧠 Coil/Glide/Kingfisher internals, disk vs memory cache</div><div class="topic-status status-not_started" data-topic="16" onclick="cycleStatus(this)">○ not started</div></div>
+
+    <div class="week-label">Week 5 — Backend Scaling Primitives</div>
+    <div class="topic-row"><div class="topic-num">17</div><div class="topic-name">Load balancing: L4 vs L7, consistent hashing, health checks <span class="tag tag-backend">backend</span></div><div class="topic-resource">📖 Alex Xu Vol.1 Ch.5 | 📖 DDIA Ch.6</div><div class="topic-status status-not_started" data-topic="17" onclick="cycleStatus(this)">○ not started</div></div>
+    <div class="topic-row"><div class="topic-num">18</div><div class="topic-name">Database sharding: horizontal, vertical, hash vs range <span class="tag tag-backend">backend</span></div><div class="topic-resource">📖 DDIA Ch.6 | 📖 Alex Xu Vol.1 Ch.8</div><div class="topic-status status-not_started" data-topic="18" onclick="cycleStatus(this)">○ not started</div></div>
+    <div class="topic-row"><div class="topic-num">19</div><div class="topic-name">Message queues: Kafka, RabbitMQ, pub/sub patterns <span class="tag tag-backend">backend</span></div><div class="topic-resource">📖 DDIA Ch.11 | 🧠 exactly-once, consumer groups, DLQ</div><div class="topic-status status-not_started" data-topic="19" onclick="cycleStatus(this)">○ not started</div></div>
+    <div class="topic-row"><div class="topic-num">20</div><div class="topic-name">Rate limiting: token bucket, sliding window, distributed <span class="tag tag-backend">backend</span></div><div class="topic-resource">📖 Alex Xu Vol.1 Ch.4 | 🧠 client-side rate limiting, retry with jitter</div><div class="topic-status status-not_started" data-topic="20" onclick="cycleStatus(this)">○ not started</div></div>
+
+    <div class="week-label">Week 6 — Network Edge & Delivery</div>
+    <div class="topic-row"><div class="topic-num">21</div><div class="topic-name">CDN architecture & cache invalidation strategies <span class="tag tag-both">both</span></div><div class="topic-resource">📖 Alex Xu Vol.1 Ch.5 | 🧠 pull vs push CDN, edge compute</div><div class="topic-status status-not_started" data-topic="21" onclick="cycleStatus(this)">○ not started</div></div>
+    <div class="topic-row"><div class="topic-num">22</div><div class="topic-name">API gateway patterns: routing, auth, throttling <span class="tag tag-backend">backend</span></div><div class="topic-resource">🧠 BFF pattern for mobile, GraphQL federation, API composition</div><div class="topic-status status-not_started" data-topic="22" onclick="cycleStatus(this)">○ not started</div></div>
+    <div class="topic-row"><div class="topic-num">23</div><div class="topic-name">API design: versioning, idempotency keys, error contracts <span class="tag tag-both">both</span></div><div class="topic-resource">🧠 header vs URL versioning, idempotency in payments, error schema</div><div class="topic-status status-not_started" data-topic="23" onclick="cycleStatus(this)">○ not started</div></div>
+
+    <div class="week-label">Week 7 — Offline & Sync</div>
+    <div class="topic-row"><div class="topic-num">24</div><div class="topic-name">Offline-first architecture: event sourcing on mobile <span class="tag tag-mobile">mobile</span></div><div class="topic-resource">📖 Mobile System Design Ch.5 | 🧠 outbox pattern, optimistic UI</div><div class="topic-status status-not_started" data-topic="24" onclick="cycleStatus(this)">○ not started</div></div>
+    <div class="topic-row"><div class="topic-num">25</div><div class="topic-name">CRDTs and operational transforms <span class="tag tag-both">both</span></div><div class="topic-resource">📖 DDIA Ch.5 | 🧠 G-Counter, LWW-Register, Automerge/Yjs</div><div class="topic-status status-not_started" data-topic="25" onclick="cycleStatus(this)">○ not started</div></div>
+    <div class="topic-row"><div class="topic-num">26</div><div class="topic-name">Push notifications: APNs, FCM, delivery guarantees <span class="tag tag-mobile">mobile</span></div><div class="topic-resource">🧠 silent push, notification grouping, priority levels</div><div class="topic-status status-not_started" data-topic="26" onclick="cycleStatus(this)">○ not started</div></div>
+    <div class="topic-row"><div class="topic-num">27</div><div class="topic-name">Sync strategies: pull vs push vs hybrid, delta sync <span class="tag tag-both">both</span></div><div class="topic-resource">🧠 timestamp vs vector clocks, partial sync, bandwidth optimization</div><div class="topic-status status-not_started" data-topic="27" onclick="cycleStatus(this)">○ not started</div></div>
+  </div>
+</div>
+
+<!-- PHASE 3 -->
+<div class="phase-block">
+  <div class="phase-header" onclick="toggle(this)">
+    <span class="arrow">▼</span>
+    <span style="color:var(--red)">PHASE 3 — Advanced Systems (Weeks 8–11)</span>
+    <span class="phase-count" id="p3-header-count"></span>
+  </div>
+  <div class="phase-body">
+    <div class="week-label">Week 8 — Distributed Systems Deep Dive</div>
+    <div class="topic-row"><div class="topic-num">28</div><div class="topic-name">Replication: single-leader, multi-leader, leaderless <span class="tag tag-backend">backend</span></div><div class="topic-resource">📖 DDIA Ch.5 (gold standard chapter)</div><div class="topic-status status-not_started" data-topic="28" onclick="cycleStatus(this)">○ not started</div></div>
+    <div class="topic-row"><div class="topic-num">29</div><div class="topic-name">Consistency models: linearizability, causal, eventual <span class="tag tag-backend">backend</span></div><div class="topic-resource">📖 DDIA Ch.9</div><div class="topic-status status-not_started" data-topic="29" onclick="cycleStatus(this)">○ not started</div></div>
+    <div class="topic-row"><div class="topic-num">30</div><div class="topic-name">Consensus: Raft (conceptual), leader election <span class="tag tag-backend">backend</span></div><div class="topic-resource">📖 DDIA Ch.9 | <a href="https://raft.github.io/" target="_blank">raft.github.io</a></div><div class="topic-status status-not_started" data-topic="30" onclick="cycleStatus(this)">○ not started</div></div>
+    <div class="topic-row"><div class="topic-num">31</div><div class="topic-name">Distributed transactions: Saga pattern, 2PC, TCC <span class="tag tag-backend">backend</span></div><div class="topic-resource">📖 DDIA Ch.7,9 | 📖 Alex Xu Vol.2</div><div class="topic-status status-not_started" data-topic="31" onclick="cycleStatus(this)">○ not started</div></div>
+
+    <div class="week-label">Week 9 — Real-Time & Streaming</div>
+    <div class="topic-row"><div class="topic-num">32</div><div class="topic-name">Chat system design: presence, delivery receipts, E2E <span class="tag tag-both">both</span></div><div class="topic-resource">📖 Alex Xu Vol.1 Ch.12 | 📖 Mobile System Design</div><div class="topic-status status-not_started" data-topic="32" onclick="cycleStatus(this)">○ not started</div></div>
+    <div class="topic-row"><div class="topic-num">33</div><div class="topic-name">Video streaming: HLS, DASH, adaptive bitrate <span class="tag tag-both">both</span></div><div class="topic-resource">📖 Alex Xu Vol.1 Ch.14 | 🧠 ExoPlayer/AVPlayer, buffer strategies</div><div class="topic-status status-not_started" data-topic="33" onclick="cycleStatus(this)">○ not started</div></div>
+    <div class="topic-row"><div class="topic-num">34</div><div class="topic-name">WebRTC for mobile: peer connection, STUN/TURN <span class="tag tag-both">both</span></div><div class="topic-resource">🧠 ICE candidates, SDP negotiation, mobile constraints</div><div class="topic-status status-not_started" data-topic="34" onclick="cycleStatus(this)">○ not started</div></div>
+    <div class="topic-row"><div class="topic-num">35</div><div class="topic-name">Event-driven architecture & CQRS <span class="tag tag-backend">backend</span></div><div class="topic-resource">📖 DDIA Ch.11-12 | 🧠 event store, projections</div><div class="topic-status status-not_started" data-topic="35" onclick="cycleStatus(this)">○ not started</div></div>
+
+    <div class="week-label">Week 10 — Search, Feed & Geo</div>
+    <div class="topic-row"><div class="topic-num">36</div><div class="topic-name">Search: inverted index, tokenization, ranking (TF-IDF, BM25) <span class="tag tag-backend">backend</span></div><div class="topic-resource">📖 Alex Xu Vol.2 | 🧠 Elasticsearch, autocomplete, typo tolerance</div><div class="topic-status status-not_started" data-topic="36" onclick="cycleStatus(this)">○ not started</div></div>
+    <div class="topic-row"><div class="topic-num">37</div><div class="topic-name">News feed / timeline design <span class="tag tag-both">both</span></div><div class="topic-resource">📖 Alex Xu Vol.1 Ch.11 | 📖 Mobile System Design</div><div class="topic-status status-not_started" data-topic="37" onclick="cycleStatus(this)">○ not started</div></div>
+    <div class="topic-row"><div class="topic-num">38</div><div class="topic-name">Location-based systems: geohash, quadtree, proximity <span class="tag tag-both">both</span></div><div class="topic-resource">📖 Alex Xu Vol.2 Ch.1 | 🧠 Uber/Lyft matching, geofencing</div><div class="topic-status status-not_started" data-topic="38" onclick="cycleStatus(this)">○ not started</div></div>
+
+    <div class="week-label">Week 11 — Mobile Performance & Observability</div>
+    <div class="topic-row"><div class="topic-num">39</div><div class="topic-name">Startup performance: cold/warm/hot, time-to-interactive <span class="tag tag-mobile">mobile</span></div><div class="topic-resource">📖 Mobile System Design | 🧠 baseline profiles, R8, lazy init</div><div class="topic-status status-not_started" data-topic="39" onclick="cycleStatus(this)">○ not started</div></div>
+    <div class="topic-row"><div class="topic-num">40</div><div class="topic-name">Memory management: leaks, LMK, large heap, bitmap pools <span class="tag tag-mobile">mobile</span></div><div class="topic-resource">🧠 LeakCanary internals, ARC vs GC, WeakReference</div><div class="topic-status status-not_started" data-topic="40" onclick="cycleStatus(this)">○ not started</div></div>
+    <div class="topic-row"><div class="topic-num">41</div><div class="topic-name">Rendering: 60fps, jank detection, RecyclerView/LazyColumn <span class="tag tag-mobile">mobile</span></div><div class="topic-resource">🧠 frame rendering pipeline, GPU overdraw, Compose recomposition</div><div class="topic-status status-not_started" data-topic="41" onclick="cycleStatus(this)">○ not started</div></div>
+    <div class="topic-row"><div class="topic-num">42</div><div class="topic-name">Deep linking: URI schemes, universal/app links, deferred <span class="tag tag-mobile">mobile</span></div><div class="topic-resource">🧠 link verification, Navigation deep link, attribution</div><div class="topic-status status-not_started" data-topic="42" onclick="cycleStatus(this)">○ not started</div></div>
+    <div class="topic-row"><div class="topic-num">43</div><div class="topic-name">Observability: crash reporting, ANR, network profiling <span class="tag tag-both">both</span></div><div class="topic-resource">🧠 distributed tracing (mobile→backend), correlation IDs</div><div class="topic-status status-not_started" data-topic="43" onclick="cycleStatus(this)">○ not started</div></div>
+  </div>
+</div>
+
+<!-- PHASE 4 -->
+<div class="phase-block">
+  <div class="phase-header" onclick="toggle(this)">
+    <span class="arrow">▼</span>
+    <span style="color:var(--purple)">PHASE 4 — Staff-Level Thinking (Weeks 12–14)</span>
+    <span class="phase-count" id="p4-header-count"></span>
+  </div>
+  <div class="phase-body">
+    <div class="week-label">Week 12 — Cross-Cutting Concerns</div>
+    <div class="topic-row"><div class="topic-num">44</div><div class="topic-name">Full-stack system design: mobile ↔ backend co-design <span class="tag tag-both">both</span></div><div class="topic-resource">🧠 contract-first API, shared schema validation, BFF evolution</div><div class="topic-status status-not_started" data-topic="44" onclick="cycleStatus(this)">○ not started</div></div>
+    <div class="topic-row"><div class="topic-num">45</div><div class="topic-name">Feature flags & experimentation infrastructure <span class="tag tag-both">both</span></div><div class="topic-resource">🧠 LaunchDarkly arch, client-side eval, statsig, bucketing</div><div class="topic-status status-not_started" data-topic="45" onclick="cycleStatus(this)">○ not started</div></div>
+    <div class="topic-row"><div class="topic-num">46</div><div class="topic-name">Security: OAuth2/OIDC, cert pinning, E2E encryption <span class="tag tag-both">both</span></div><div class="topic-resource">🧠 PKCE for mobile, token refresh, biometric auth, secure enclave</div><div class="topic-status status-not_started" data-topic="46" onclick="cycleStatus(this)">○ not started</div></div>
+    <div class="topic-row"><div class="topic-num">47</div><div class="topic-name">Migration strategies: strangler fig, blue-green, canary <span class="tag tag-both">both</span></div><div class="topic-resource">📖 SE at Google | 🧠 mobile forced upgrade, API sunset</div><div class="topic-status status-not_started" data-topic="47" onclick="cycleStatus(this)">○ not started</div></div>
+
+    <div class="week-label">Week 13 — Scale & Infrastructure</div>
+    <div class="topic-row"><div class="topic-num">48</div><div class="topic-name">Multi-region / geo-distributed architecture <span class="tag tag-backend">backend</span></div><div class="topic-resource">📖 DDIA Ch.5 (multi-leader) | 🧠 CockroachDB/Spanner, geo-routing</div><div class="topic-status status-not_started" data-topic="48" onclick="cycleStatus(this)">○ not started</div></div>
+    <div class="topic-row"><div class="topic-num">49</div><div class="topic-name">Cost modeling & capacity planning <span class="tag tag-backend">backend</span></div><div class="topic-resource">🧠 back-of-envelope, QPS→machine mapping, storage growth</div><div class="topic-status status-not_started" data-topic="49" onclick="cycleStatus(this)">○ not started</div></div>
+    <div class="topic-row"><div class="topic-num">50</div><div class="topic-name">ML systems: feature store, model serving, A/B testing <span class="tag tag-both">both</span></div><div class="topic-resource">📖 Alex Xu Vol.2 | 🧠 on-device ML (CoreML, TFLite)</div><div class="topic-status status-not_started" data-topic="50" onclick="cycleStatus(this)">○ not started</div></div>
+    <div class="topic-row"><div class="topic-num">51</div><div class="topic-name">Build systems, modularization, CI/CD at scale <span class="tag tag-mobile">mobile</span></div><div class="topic-resource">📖 SE at Google Ch.18-23 | 🧠 Bazel, Gradle module graph</div><div class="topic-status status-not_started" data-topic="51" onclick="cycleStatus(this)">○ not started</div></div>
+
+    <div class="week-label">Week 14 — Synthesis & Mock Practice</div>
+    <div class="topic-row"><div class="topic-num">52</div><div class="topic-name">Technical decision frameworks & RFC writing <span class="tag tag-both">both</span></div><div class="topic-resource">📖 Fundamentals of Software Architecture | 📖 Staff Engineer</div><div class="topic-status status-not_started" data-topic="52" onclick="cycleStatus(this)">○ not started</div></div>
+    <div class="topic-row"><div class="topic-num">53</div><div class="topic-name">Interview framework: RESHADED method <span class="tag tag-both">both</span></div><div class="topic-resource"><a href="https://www.systemdesignhandbook.com/guides/system-design-interview/" target="_blank">systemdesignhandbook.com</a> | <a href="https://www.techinterviewhandbook.org/system-design/" target="_blank">techinterviewhandbook.org</a></div><div class="topic-status status-not_started" data-topic="53" onclick="cycleStatus(this)">○ not started</div></div>
+    <div class="topic-row"><div class="topic-num">54</div><div class="topic-name">Mock practice: 3 full mobile designs, 3 full backend designs <span class="tag tag-both">both</span></div><div class="topic-resource">Use grill-me skill | <a href="https://igotanoffer.com/blogs/tech/system-design-interviews" target="_blank">IGotAnOffer questions</a></div><div class="topic-status status-not_started" data-topic="54" onclick="cycleStatus(this)">○ not started</div></div>
+  </div>
+</div>
+
+</div>
+
+<!-- ========== BOOKS ========== -->
+<h2>Recommended Books</h2>
+<div class="book-grid">
+  <div class="book-card"><div class="title">Designing Data-Intensive Applications</div><div class="author">Martin Kleppmann</div><div class="use">→ Core backend theory: Ch.1-12 map directly to P1-P3</div></div>
+  <div class="book-card"><div class="title">System Design Interview Vol. 1</div><div class="author">Alex Xu</div><div class="use">→ Pattern catalog: rate limiting, caching, sharding, chat, feed</div></div>
+  <div class="book-card"><div class="title">System Design Interview Vol. 2</div><div class="author">Alex Xu</div><div class="use">→ Advanced: proximity, search, distributed transactions</div></div>
+  <div class="book-card"><div class="title">Mobile System Design</div><div class="author">Manuel Vivo / mobilesystemdesign.com</div><div class="use">→ Mobile-specific patterns: lifecycle, offline, image pipeline</div></div>
+  <div class="book-card"><div class="title">Fundamentals of Software Architecture</div><div class="author">Richards & Ford</div><div class="use">→ Architecture decision records, trade-off analysis</div></div>
+  <div class="book-card"><div class="title">Software Engineering at Google</div><div class="author">Winters, Manshreck, Wright (free online)</div><div class="use">→ Staff-level: build systems, CI/CD, migration at scale</div></div>
+  <div class="book-card"><div class="title">Staff Engineer</div><div class="author">Will Larson</div><div class="use">→ Leadership patterns, technical decision frameworks, RFC writing</div></div>
+</div>
+
+<!-- ========== INTERVIEW QUICK-HITS ========== -->
+<h2>Interview Quick-Hits — Topics That Always Come Up</h2>
+<div class="note">These span multiple phases. If short on time, ensure you can whiteboard these confidently.</div>
+<div style="display:flex;flex-wrap:wrap;gap:6px;margin:10px 0;font-size:0.8em;">
+  <span style="background:var(--surface);padding:3px 8px;border-radius:3px;margin:2px;display:inline-block;">Back-of-envelope estimation</span>
+  <span style="background:var(--surface);padding:3px 8px;border-radius:3px;margin:2px;display:inline-block;">Cache stampede & thundering herd</span>
+  <span style="background:var(--surface);padding:3px 8px;border-radius:3px;margin:2px;display:inline-block;">Consistent hashing</span>
+  <span style="background:var(--surface);padding:3px 8px;border-radius:3px;margin:2px;display:inline-block;">CAP: which side does your system pick?</span>
+  <span style="background:var(--surface);padding:3px 8px;border-radius:3px;margin:2px;display:inline-block;">Offline-first sync & conflict resolution</span>
+  <span style="background:var(--surface);padding:3px 8px;border-radius:3px;margin:2px;display:inline-block;">Push notification reliability</span>
+  <span style="background:var(--surface);padding:3px 8px;border-radius:3px;margin:2px;display:inline-block;">Pagination: cursor vs offset</span>
+  <span style="background:var(--surface);padding:3px 8px;border-radius:3px;margin:2px;display:inline-block;">Image loading pipeline on mobile</span>
+  <span style="background:var(--surface);padding:3px 8px;border-radius:3px;margin:2px;display:inline-block;">Rate limiting algorithms</span>
+  <span style="background:var(--surface);padding:3px 8px;border-radius:3px;margin:2px;display:inline-block;">Message queue: exactly-once delivery</span>
+  <span style="background:var(--surface);padding:3px 8px;border-radius:3px;margin:2px;display:inline-block;">Memory management: ARC vs GC</span>
+  <span style="background:var(--surface);padding:3px 8px;border-radius:3px;margin:2px;display:inline-block;">Compose recomposition & diffing</span>
+  <span style="background:var(--surface);padding:3px 8px;border-radius:3px;margin:2px;display:inline-block;">Feature flag architecture (client-side eval)</span>
+  <span style="background:var(--surface);padding:3px 8px;border-radius:3px;margin:2px;display:inline-block;">OAuth2 PKCE for mobile</span>
+  <span style="background:var(--surface);padding:3px 8px;border-radius:3px;margin:2px;display:inline-block;">On-device ML: CoreML vs TFLite</span>
+  <span style="background:var(--surface);padding:3px 8px;border-radius:3px;margin:2px;display:inline-block;">Gradle module graph optimization</span>
+  <span style="background:var(--surface);padding:3px 8px;border-radius:3px;margin:2px;display:inline-block;">Distributed tracing mobile→backend</span>
+</div>
+
+<script>
+// Phase → topic ranges
+const PHASES = {
+  P1: { start: 1, end: 12, total: 12 },
+  P2: { start: 13, end: 27, total: 15 },
+  P3: { start: 28, end: 43, total: 16 },
+  P4: { start: 44, end: 54, total: 11 }
+};
+const STATES = ['not_started', 'in_progress', 'done'];
+const LABELS = { not_started: '○ not started', in_progress: '◑ in progress', done: '● done' };
+
+function loadState() {
+  try { return JSON.parse(localStorage.getItem('sysdesign_progress')) || {}; } catch { return {}; }
+}
+function saveState(state) {
+  localStorage.setItem('sysdesign_progress', JSON.stringify(state));
+}
+
+function cycleStatus(el) {
+  const topic = el.dataset.topic;
+  const state = loadState();
+  const current = state[topic] || 'not_started';
+  const nextIdx = (STATES.indexOf(current) + 1) % STATES.length;
+  const next = STATES[nextIdx];
+  state[topic] = next;
+  saveState(state);
+  applyStatus(el, next);
+  updateAllCounts();
+  updateMindmap();
+}
+
+function applyStatus(el, status) {
+  el.className = 'topic-status status-' + status;
+  el.textContent = LABELS[status];
+}
+
+function updateAllCounts() {
+  const state = loadState();
+  let totalDone = 0;
+  for (const [phase, range] of Object.entries(PHASES)) {
+    let done = 0;
+    for (let i = range.start; i <= range.end; i++) {
+      if (state[String(i)] === 'done') done++;
+    }
+    totalDone += done;
+    const countEl = document.getElementById(phase.toLowerCase() + '-count');
+    if (countEl) countEl.textContent = done + '/' + range.total;
+    const headerEl = document.getElementById(phase.toLowerCase() + '-header-count');
+    if (headerEl) headerEl.textContent = done + '/' + range.total + ' done';
+  }
+  const pctEl = document.getElementById('overall-pct');
+  const fillEl = document.getElementById('progress-fill');
+  if (pctEl) pctEl.textContent = totalDone + ' / 54';
+  if (fillEl) fillEl.style.width = ((totalDone / 54) * 100).toFixed(1) + '%';
+}
+
+function updateMindmap() {
+  const state = loadState();
+  document.querySelectorAll('.mm-items li[data-t]').forEach(li => {
+    const t = li.dataset.t;
+    if (state[t] === 'done') li.classList.add('done');
+    else li.classList.remove('done');
+  });
+}
+
+function toggle(header) {
+  header.classList.toggle('collapsed');
+  const body = header.nextElementSibling;
+  body.classList.toggle('hidden');
+}
+
+function exportJSON() {
+  const state = loadState();
+  const phases = {};
+  for (const [phase, range] of Object.entries(PHASES)) {
+    let done = 0, inProg = 0;
+    for (let i = range.start; i <= range.end; i++) {
+      const s = state[String(i)] || 'not_started';
+      if (s === 'done') done++;
+      else if (s === 'in_progress') inProg++;
+    }
+    if (done === range.total) phases[phase] = 'done';
+    else if (done > 0 || inProg > 0) phases[phase] = 'in_progress';
+    else phases[phase] = 'not_started';
+  }
+  const topics = {};
+  for (let i = 1; i <= 54; i++) topics[String(i)] = state[String(i)] || 'not_started';
+  const out = { last_updated: new Date().toISOString().slice(0, 10), phases, topics };
+  const blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'progress.json';
+  a.click();
+}
+
+function resetAll() {
+  if (!confirm('Reset all progress? This cannot be undone.')) return;
+  localStorage.removeItem('sysdesign_progress');
+  document.querySelectorAll('.topic-status').forEach(el => applyStatus(el, 'not_started'));
+  updateAllCounts();
+  updateMindmap();
+}
+
+// Init on load
+(function init() {
+  const state = loadState();
+  document.querySelectorAll('.topic-status[data-topic]').forEach(el => {
+    const s = state[el.dataset.topic] || 'not_started';
+    applyStatus(el, s);
+  });
+  updateAllCounts();
+  updateMindmap();
+})();
+</script>
+
+</body>
+</html>
