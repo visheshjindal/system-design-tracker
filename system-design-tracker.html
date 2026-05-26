@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>System Design // Staff Track</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0d0e11; --panel:#15171c; --panel-2:#1a1d24;
+    --line:#262932; --line-bright:#3a3e4c;
+    --text:#e9e7e2; --text-dim:#9a9da7; --muted:#62656f;
+    --lime:#c5e836; --lime-dim:#7e8f2e;
+    --amber:#e9a23b; --cyan:#5fb8c9; --own:#7b7e88;
+    --red:#d8624a;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--ink);}
+  body{
+    font-family:'JetBrains Mono',ui-monospace,monospace;
+    color:var(--text); line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    background-image:
+      radial-gradient(900px 500px at 88% -8%, rgba(197,232,54,.06), transparent 70%),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.022'/%3E%3C/svg%3E");
+    min-height:100vh;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:34px 26px 90px;}
+
+  header{border-bottom:1px solid var(--line);padding-bottom:22px;margin-bottom:30px;}
+  .kicker{font-size:11px;letter-spacing:.34em;color:var(--lime);font-weight:700;text-transform:uppercase;}
+  h1{font-size:30px;font-weight:800;letter-spacing:-.01em;margin:9px 0 4px;}
+  h1 .slash{color:var(--muted);font-weight:500;}
+  .sub{font-size:12.5px;color:var(--text-dim);}
+  .readout{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px;}
+  .stat{
+    flex:1;min-width:150px;background:var(--panel);border:1px solid var(--line);
+    border-left:2px solid var(--line-bright);padding:11px 14px;
+  }
+  .stat .lbl{font-size:9.5px;letter-spacing:.18em;color:var(--muted);text-transform:uppercase;}
+  .stat .val{font-size:20px;font-weight:800;margin-top:4px;}
+  .stat .val small{font-size:12px;color:var(--text-dim);font-weight:500;}
+  .stat.hot{border-left-color:var(--lime);}
+  .stat.hot .val{color:var(--lime);}
+
+  .iobar{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;align-items:center;}
+  .iobtn{
+    background:transparent;border:1px solid var(--line);color:var(--text-dim);
+    font-family:inherit;font-size:10px;letter-spacing:.12em;padding:6px 11px;cursor:pointer;
+    text-transform:uppercase;transition:.15s;
+  }
+  .iobtn:hover{border-color:var(--lime);color:var(--lime);}
+  .iobtn.danger:hover{border-color:var(--red);color:var(--red);}
+  .storewarn{font-size:10px;color:var(--amber);letter-spacing:.04em;margin-left:4px;}
+
+  section{margin-top:34px;}
+  .sec-head{display:flex;align-items:baseline;gap:12px;margin-bottom:6px;flex-wrap:wrap;}
+  .sec-no{font-size:11px;font-weight:800;color:var(--lime);letter-spacing:.1em;}
+  .sec-title{font-size:16px;font-weight:800;letter-spacing:.01em;}
+  .sec-note{font-size:11.5px;color:var(--text-dim);margin:2px 0 14px;max-width:78ch;}
+  .sec-note b{color:var(--text);font-weight:600;}
+
+  .bar{height:3px;background:var(--line);margin:10px 0 16px;position:relative;overflow:hidden;}
+  .bar > i{position:absolute;left:0;top:0;bottom:0;background:var(--lime);width:0;
+    transition:width .5s cubic-bezier(.2,.7,.2,1);}
+  .bar.amber > i{background:var(--amber);}
+  .bar.own > i{background:var(--own);}
+
+  .row{
+    display:flex;align-items:flex-start;gap:13px;background:var(--panel);
+    border:1px solid var(--line);padding:11px 14px;margin-bottom:6px;
+    transition:border-color .15s,background .15s;
+  }
+  .row:hover{border-color:var(--line-bright);}
+  .row .body{flex:1;min-width:0;}
+  .row .t{font-size:12.5px;font-weight:600;}
+  .row .d{font-size:11px;color:var(--text-dim);margin-top:3px;}
+  .row.done .t{color:var(--muted);text-decoration:line-through;text-decoration-color:var(--lime-dim);}
+  .row.done .d{color:var(--muted);}
+
+  .chk{
+    flex:none;width:17px;height:17px;border:1.5px solid var(--line-bright);
+    background:transparent;cursor:pointer;margin-top:1px;display:grid;place-items:center;
+    transition:.15s;border-radius:2px;
+  }
+  .chk:hover{border-color:var(--lime);}
+  .chk[data-on="1"]{background:var(--lime);border-color:var(--lime);}
+  .chk[data-on="1"]::after{content:"";width:5px;height:9px;border:solid var(--ink);
+    border-width:0 2.5px 2.5px 0;transform:rotate(45deg) translate(-1px,-1px);}
+
+  .src{font-size:9.5px;letter-spacing:.06em;color:var(--muted);margin-top:5px;
+    border-top:1px dashed var(--line);padding-top:5px;display:inline-block;}
+  .src b{color:var(--cyan);font-weight:600;}
+
+  .buckets{display:grid;grid-template-columns:1fr;gap:18px;}
+  @media(min-width:760px){.buckets{grid-template-columns:1fr 1fr;}}
+  .bk{background:var(--panel-2);border:1px solid var(--line);border-top:2px solid var(--own);padding:15px;}
+  .bk.b2{border-top-color:var(--lime);grid-column:1/-1;}
+  .bk.b3{border-top-color:var(--amber);}
+  .bk-tag{font-size:9.5px;letter-spacing:.16em;font-weight:700;text-transform:uppercase;}
+  .bk.b1 .bk-tag{color:var(--own);} .bk.b2 .bk-tag{color:var(--lime);} .bk.b3 .bk-tag{color:var(--amber);}
+  .bk-name{font-size:14px;font-weight:800;margin:4px 0 2px;}
+  .bk-rule{font-size:10.5px;color:var(--text-dim);margin-bottom:11px;}
+  .bk .row{background:var(--panel);margin-bottom:5px;padding:9px 11px;}
+  @media(min-width:760px){.b2-inner{display:grid;grid-template-columns:1fr 1fr;gap:5px;}.b2-inner .row{margin-bottom:0;}}
+
+  .prob{background:var(--panel);border:1px solid var(--line);margin-bottom:6px;transition:border-color .15s;}
+  .prob:hover{border-color:var(--line-bright);}
+  .prob-main{display:flex;align-items:flex-start;gap:13px;padding:12px 14px;}
+  .seq{flex:none;font-size:13px;font-weight:800;color:var(--muted);width:26px;text-align:right;
+    padding-top:1px;font-variant-numeric:tabular-nums;}
+  .prob .body{flex:1;min-width:0;}
+  .prob .pname{font-size:13px;font-weight:700;}
+  .prob .ptests{font-size:10.5px;color:var(--text-dim);margin-top:3px;}
+  .ptag{font-size:9px;letter-spacing:.05em;font-weight:600;padding:2px 6px;border:1px solid var(--line-bright);
+    display:inline-block;margin-top:6px;color:var(--text-dim);border-radius:2px;}
+  .ptag.vivo{color:var(--cyan);border-color:rgba(95,184,201,.4);}
+  .ptag.open{color:var(--amber);border-color:rgba(233,162,59,.35);}
+
+  .ctrls{flex:none;display:flex;flex-direction:column;gap:6px;align-items:flex-end;}
+  .status{font-family:inherit;font-size:9px;font-weight:700;letter-spacing:.08em;
+    padding:5px 9px;cursor:pointer;border:1px solid var(--line-bright);background:transparent;
+    color:var(--muted);text-transform:uppercase;min-width:104px;text-align:center;transition:.15s;}
+  .status[data-s="1"]{color:var(--amber);border-color:var(--amber);}
+  .status[data-s="2"]{color:var(--cyan);border-color:var(--cyan);}
+  .status[data-s="3"]{color:var(--ink);background:var(--lime);border-color:var(--lime);}
+  .jbtn{font-family:inherit;font-size:9px;letter-spacing:.1em;background:none;border:none;
+    color:var(--muted);cursor:pointer;text-transform:uppercase;padding:2px;}
+  .jbtn:hover{color:var(--lime);}
+  .jwrap{display:none;padding:0 14px 13px 53px;}
+  .jwrap.open{display:block;}
+  .jwrap textarea{
+    width:100%;background:var(--ink);border:1px solid var(--line);color:var(--text);
+    font-family:inherit;font-size:11px;line-height:1.6;padding:9px 11px;resize:vertical;min-height:74px;
+  }
+  .jwrap textarea:focus{outline:none;border-color:var(--lime-dim);}
+  .jwrap textarea::placeholder{color:var(--muted);}
+
+  .domain-lbl{font-size:10px;letter-spacing:.2em;color:var(--muted);text-transform:uppercase;
+    margin:16px 0 8px;border-bottom:1px solid var(--line);padding-bottom:5px;}
+
+  .method{background:var(--panel-2);border:1px solid var(--line);border-left:2px solid var(--lime);
+    padding:16px 18px;margin-top:34px;}
+  .method h3{font-size:11px;letter-spacing:.18em;color:var(--lime);text-transform:uppercase;margin-bottom:9px;}
+  .method p{font-size:11.5px;color:var(--text-dim);margin-bottom:7px;}
+  .method p b{color:var(--text);font-weight:600;}
+  .method code{background:var(--ink);border:1px solid var(--line);padding:1px 5px;font-size:10.5px;color:var(--lime);}
+
+  .foot{text-align:center;font-size:9.5px;color:var(--muted);margin-top:34px;letter-spacing:.05em;line-height:1.8;}
+
+  .reveal{opacity:0;transform:translateY(7px);animation:rise .5s ease forwards;}
+  @keyframes rise{to{opacity:1;transform:none;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="reveal">
+    <div class="kicker">Interview Prep · 6-Month Window</div>
+    <h1>System Design <span class="slash">//</span> Staff Track</h1>
+    <div class="sub">Mobile-weighted. Practice loop, not a reading list. Front-load the floor, then rep with answer keys.</div>
+    <div class="readout" id="readout"></div>
+    <div class="iobar">
+      <button class="iobtn" id="export">Export backup</button>
+      <button class="iobtn" id="importBtn">Import backup</button>
+      <button class="iobtn danger" id="reset">Reset all</button>
+      <input type="file" id="importFile" accept="application/json,.json" style="display:none">
+      <span class="storewarn" id="storewarn"></span>
+    </div>
+  </header>
+
+  <section class="reveal" style="animation-delay:.05s">
+    <div class="sec-head"><span class="sec-no">PHASE 0</span><span class="sec-title">Front-load — the only thing you read ahead</span></div>
+    <div class="sec-note">~1 week, 3–4 sessions. This is the entire pre-practice phase. The deeper foundations arrive <b>inside</b> the worked problems, not before them. Do not extend this into a reading detour.</div>
+    <div class="bar" id="bar-f"><i></i></div>
+    <div id="frontload"></div>
+  </section>
+
+  <section class="reveal" style="animation-delay:.1s">
+    <div class="sec-head"><span class="sec-no">TOPICS</span><span class="sec-title">The three buckets</span></div>
+    <div class="sec-note">Bucket 1 you already own from the Lloyds job — checking it off means <b>"I recognise this as system-design vocabulary,"</b> not study. Bucket 2 is the real front-load. Bucket 3 is names-now, depth-on-demand.</div>
+    <div class="bar own" id="bar-b1"><i></i></div>
+    <div class="buckets" id="buckets"></div>
+  </section>
+
+  <section class="reveal" style="animation-delay:.15s">
+    <div class="sec-head"><span class="sec-no">PHASE 1</span><span class="sec-title">Practice problems — recommended sequence</span></div>
+    <div class="sec-note">Vivo answer-key problems first (you can diff your design), then open-book. One rep per session, 45 min timed. Status cycles on click: <b>Not started → Attempted → Reviewed → Solid</b>. Reviewed = rep done + diffed. Solid = could carry a real interview.</div>
+    <div class="bar" id="bar-p"><i></i></div>
+    <div id="problems"></div>
+  </section>
+
+  <div class="method reveal" style="animation-delay:.2s">
+    <h3>Rep protocol</h3>
+    <p><b>One rep =</b> 45 min timed — <code>Requirements 5'</code> → <code>HLD 10'</code> → <code>Deep dive 20'</code> → <code>Trade-offs + wrap 10'</code>. Then diff against the Vivo chapter, or self-critique for open-book problems.</p>
+    <p><b>Then journal</b> (the textarea on each problem): framework path taken · key trade-off + why · what you fumbled · the trigger that should fire next time.</p>
+    <p><b>Cadence:</b> 2 sessions/week, 60–90 min each. Do not touch the 5:15–6:15 DSA slot — system design tolerates a less-fresh brain; DSA does not.</p>
+  </div>
+
+  <div class="foot">
+    Saves to this browser's localStorage — persists across restarts, dies only on a site-data clear.<br>
+    State is per-device · export a backup periodically and to move progress between machines.
+  </div>
+</div>
+
+<script>
+/* ---------------- data ---------------- */
+const FRONTLOAD=[
+ {id:'f1',label:'Vivo Ch2 - A Framework for Mobile System Design Interviews',meta:'~6pp · read first · the skeleton for every rep'},
+ {id:'f2',label:'Vivo Ch10 - Mobile System Design Building Blocks',meta:'~68pp · vocabulary pass over 3-4 sessions · stop when you can name each block + one trade-off'},
+ {id:'f3',label:'Bucket 2 vocabulary pass complete',meta:'Can name every B2 topic and state a trade-off for each - that is the floor'},
+ {id:'f4',label:'Bucket 3 names pass',meta:'Wu Vol 1 Ch1 · one ~2hr sitting · name + one-liner per distributed topic'},
+];
+const B1=[
+ 'Layered architecture / separation of concerns',
+ 'MVVM / MVI · unidirectional data flow',
+ 'Feature-module modularization',
+ 'Dependency injection',
+ 'Repository pattern + single source of truth',
+ 'Structured concurrency: coroutines, Flow, threading',
+ 'Jetpack: Room, DataStore, WorkManager',
+ 'Client state machine + side-effect handling (Payday widget)',
+];
+const B2=[
+ {t:'Caching theory',d:'cache-aside / read-through / write-through / write-back · eviction LRU·LFU·TTL · invalidation · multi-tier memory->disk->network',src:'Vivo Ch10 · applied Ch3, Ch9'},
+ {t:'Pagination',d:'offset vs cursor/keyset · why cursor wins for feeds',src:'Vivo Ch6 (do as a rep)'},
+ {t:'Real-time transport',d:'polling -> long-polling -> SSE -> WebSockets · battery cost of each',src:'Vivo Ch4, Ch5, Ch10'},
+ {t:'Sync & conflict resolution',d:'last-write-wins · version vectors · CRDT/OT (awareness) · outbox pattern · optimistic update + rollback',src:'Vivo Ch8, Ch4'},
+ {t:'Networking resilience',d:'exponential backoff + jitter · request dedup / in-flight coalescing · idempotency keys',src:'Vivo Ch10'},
+ {t:'Non-functional axes',d:'battery · app size · cold start · observability (logging/crash/metrics/tracing) · security (Keystore, cert pinning, encryption at rest, tokens)',src:'Vivo Ch10'},
+];
+const B3=[
+ 'Horizontal scaling & load balancing',
+ 'SQL vs NoSQL · replication · sharding / partitioning',
+ 'Caching tiers - CDN, server cache (Redis)',
+ 'Message queues / pub-sub · async processing',
+ 'Consistency models - strong vs eventual · CAP',
+ 'Rate-limiting algorithms - token / leaky bucket, sliding window',
+ 'Consistent hashing',
+ 'Fan-out-on-write vs fan-out-on-read',
+];
+const PROBLEMS=[
+ {id:'p1',name:'News Feed / photo-sharing client',tests:'Pagination · image loading · prefetch · cache layering · optimistic updates',tag:'VIVO Ch3',cls:'vivo',dom:'mobile'},
+ {id:'p2',name:'Pagination Library',tests:'Offset vs cursor/keyset · prefetch · error/retry · cache integration',tag:'VIVO Ch6 · also B2 foundation',cls:'vivo',dom:'mobile'},
+ {id:'p3',name:'Chat / messaging client',tests:'Real-time transport · ordering · delivery state · offline send queue · local DB as source of truth',tag:'VIVO Ch4',cls:'vivo',dom:'mobile'},
+ {id:'p4',name:'Stock Trading app',tests:'Real-time price streaming · high-frequency updates · throttling / coalescing',tag:'VIVO Ch5 · your domain',cls:'vivo',dom:'mobile'},
+ {id:'p5',name:'Hotel Reservation app',tests:'Booking flow · availability · idempotent reservation · multi-step state',tag:'VIVO Ch7',cls:'vivo',dom:'mobile'},
+ {id:'p6',name:'Cloud-drive / file-sync client',tests:'Delta sync · large-file handling · conflict resolution · sync engine',tag:'VIVO Ch8',cls:'vivo',dom:'mobile'},
+ {id:'p7',name:'Video / music streaming client',tests:'Adaptive bitrate · buffering / prefetch · offline downloads · DRM awareness',tag:'VIVO Ch9',cls:'vivo',dom:'mobile'},
+ {id:'p8',name:'Offline-first sync (notes app)',tests:'Conflict resolution · outbox pattern · optimistic UI + rollback',tag:'OPEN-BOOK',cls:'open',dom:'mobile'},
+ {id:'p9',name:'Image loading & caching library',tests:'Memory + disk cache · LRU eviction · request dedup · lifecycle · bitmap memory',tag:'OPEN-BOOK',cls:'open',dom:'mobile'},
+ {id:'p10',name:'File upload / download manager',tests:'Background execution · resumable transfers · retry/backoff · progress · WorkManager',tag:'OPEN-BOOK',cls:'open',dom:'mobile'},
+ {id:'p11',name:'Ride-sharing client',tests:'Real-time location · map render cost · polling vs push · battery · trip state machine',tag:'OPEN-BOOK',cls:'open',dom:'mobile'},
+ {id:'p12',name:'Analytics / telemetry SDK',tests:'Event batching · offline buffering · flush policy · sampling · battery/network footprint',tag:'OPEN-BOOK',cls:'open',dom:'mobile'},
+ {id:'p13',name:'Typeahead / autocomplete',tests:'Debouncing · client cache · in-flight request cancellation · ranking',tag:'OPEN-BOOK',cls:'open',dom:'mobile'},
+ {id:'p14',name:'Payments / wallet feature',tests:'Idempotency · secure storage · tokenization · state machine · retry semantics',tag:'OPEN-BOOK · your wheelhouse',cls:'open',dom:'mobile'},
+ {id:'p15',name:'Client-side notification system',tests:'FCM / push handling · in-app vs system · dedup · deep linking · delivery reliability',tag:'OPEN-BOOK',cls:'open',dom:'mobile'},
+ {id:'p16',name:'URL shortener',tests:'Key generation / hashing · read-heavy caching · storage choice',tag:'OPEN-BOOK · Wu V1',cls:'open',dom:'backend'},
+ {id:'p17',name:'Rate limiter',tests:'Token bucket / leaky bucket / sliding window · distributed counter placement',tag:'OPEN-BOOK · Wu V1',cls:'open',dom:'backend'},
+ {id:'p18',name:'Notification / push service (server-side)',tests:'Message queues · fan-out · delivery guarantees · APNs/FCM gateways · pairs with #15',tag:'OPEN-BOOK · Wu V1',cls:'open',dom:'backend'},
+ {id:'p19',name:'News feed service (backend)',tests:'Fan-out-on-write vs on-read · feed generation · caching · pairs with #1',tag:'OPEN-BOOK · Wu V1',cls:'open',dom:'backend'},
+];
+const STATUS=['Not started','Attempted','Reviewed','Solid'];
+
+/* ---------------- state + persistence (localStorage) ---------------- */
+const KEY='sd_tracker_state_v1';
+let state={check:{},prob:{}};
+PROBLEMS.forEach(p=>state.prob[p.id]={s:0,note:''});
+
+let storeOK=true;
+try{const t='__sd_t';localStorage.setItem(t,'1');localStorage.removeItem(t);}
+catch(e){storeOK=false;}
+
+function load(){
+  if(!storeOK)return;
+  try{
+    const raw=localStorage.getItem(KEY);
+    if(raw){
+      const saved=JSON.parse(raw);
+      state.check=Object.assign({},saved.check||{});
+      PROBLEMS.forEach(p=>{ if(saved.prob&&saved.prob[p.id]) state.prob[p.id]=saved.prob[p.id]; });
+    }
+  }catch(e){/* first run or corrupt - keep defaults */}
+}
+let saveT=null;
+function save(){
+  if(!storeOK)return;
+  clearTimeout(saveT);
+  saveT=setTimeout(()=>{ try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){console.warn('save failed',e);} },150);
+}
+function exportBackup(){
+  const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='sd-tracker-backup-'+new Date().toISOString().slice(0,10)+'.json';
+  document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+function importBackup(file){
+  const r=new FileReader();
+  r.onload=()=>{
+    try{
+      const data=JSON.parse(r.result);
+      if(!data||typeof data!=='object')throw 0;
+      state.check=Object.assign({},data.check||{});
+      PROBLEMS.forEach(p=>{ state.prob[p.id]=(data.prob&&data.prob[p.id])?data.prob[p.id]:{s:0,note:''}; });
+      save();renderAll();
+    }catch(e){alert('Could not read that file - not a valid backup export.');}
+  };
+  r.readAsText(file);
+}
+
+/* ---------------- render ---------------- */
+function el(html){const t=document.createElement('template');t.innerHTML=html.trim();return t.content.firstChild;}
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+
+function renderFrontload(){
+  const c=document.getElementById('frontload');c.innerHTML='';
+  FRONTLOAD.forEach(f=>{
+    const on=state.check[f.id]?1:0;
+    c.appendChild(el('<div class="row '+(on?'done':'')+'">'
+      +'<button class="chk" data-on="'+on+'" data-cid="'+f.id+'" aria-label="toggle"></button>'
+      +'<div class="body"><div class="t">'+esc(f.label)+'</div><div class="d">'+esc(f.meta)+'</div></div></div>'));
+  });
+}
+function bucketRows(arr,prefix,withSrc){
+  return arr.map((item,i)=>{
+    const id=prefix+'-'+i, on=state.check[id]?1:0;
+    const t=withSrc?item.t:item, d=withSrc?item.d:'';
+    return '<div class="row '+(on?'done':'')+'">'
+      +'<button class="chk" data-on="'+on+'" data-cid="'+id+'"></button>'
+      +'<div class="body"><div class="t">'+esc(t)+'</div>'
+      +(d?'<div class="d">'+esc(d)+'</div>':'')
+      +(withSrc?'<div class="src">SOURCE&nbsp; <b>'+esc(item.src)+'</b></div>':'')
+      +'</div></div>';
+  }).join('');
+}
+function renderBuckets(){
+  document.getElementById('buckets').innerHTML=
+   '<div class="bk b1">'
+    +'<div class="bk-tag">Bucket 1 · already own</div>'
+    +'<div class="bk-name">Relabel, don\'t re-learn</div>'
+    +'<div class="bk-rule">Zero study time. Check = "I\'d say this out loud in an interview."</div>'
+    +bucketRows(B1,'b1',false)+'</div>'
+   +'<div class="bk b3">'
+    +'<div class="bk-tag">Bucket 3 · distributed literacy</div>'
+    +'<div class="bk-name">Names now, depth on demand</div>'
+    +'<div class="bk-rule">One sitting for the names. Deepen each only when a rep forces it.</div>'
+    +bucketRows(B3,'b3',false)+'</div>'
+   +'<div class="bk b2">'
+    +'<div class="bk-tag">Bucket 2 · genuine gaps - FRONT-LOAD</div>'
+    +'<div class="bk-name">The real prerequisite</div>'
+    +'<div class="bk-rule">Acquire to conversational fluency during Phase 0. Maps onto Vivo Ch2 + Ch10.</div>'
+    +'<div class="b2-inner">'+bucketRows(B2,'b2',true)+'</div></div>';
+}
+function renderProblems(){
+  const c=document.getElementById('problems');c.innerHTML='';
+  let lastDom=null, seq=0;
+  PROBLEMS.forEach(p=>{
+    if(p.dom!==lastDom){
+      lastDom=p.dom;
+      c.appendChild(el('<div class="domain-lbl">'+(p.dom==='mobile'?'Mobile · 15':'Backend / distributed · 4 (generalist round)')+'</div>'));
+    }
+    seq++;
+    const st=state.prob[p.id], box=el('<div class="prob"></div>');
+    box.appendChild(el('<div class="prob-main">'
+      +'<div class="seq">'+String(seq).padStart(2,'0')+'</div>'
+      +'<div class="body"><div class="pname">'+esc(p.name)+'</div>'
+      +'<div class="ptests">'+esc(p.tests)+'</div>'
+      +'<span class="ptag '+p.cls+'">'+esc(p.tag)+'</span></div>'
+      +'<div class="ctrls">'
+      +'<button class="status" data-s="'+st.s+'" data-pid="'+p.id+'">'+STATUS[st.s]+'</button>'
+      +'<button class="jbtn" data-jid="'+p.id+'">&#9656; journal</button>'
+      +'</div></div>'));
+    const jw=el('<div class="jwrap" id="jw-'+p.id+'"><textarea data-nid="'+p.id+'" '
+      +'placeholder="Framework path  ·  key trade-off + why  ·  what I fumbled  ·  the trigger"></textarea></div>');
+    jw.querySelector('textarea').value=st.note||'';
+    box.appendChild(jw);
+    c.appendChild(box);
+  });
+}
+function pct(n,d){return d?Math.round(n/d*100):0;}
+function renderReadout(){
+  const fDone=FRONTLOAD.filter(f=>state.check[f.id]).length;
+  let bDone=0;const bTot=B1.length+B2.length+B3.length;
+  [B1,B2,B3].forEach((arr,k)=>{const pfx=['b1','b2','b3'][k];arr.forEach((_,i)=>{if(state.check[pfx+'-'+i])bDone++;});});
+  const reps=PROBLEMS.map(p=>state.prob[p.id].s);
+  const solid=reps.filter(s=>s===3).length;
+  const repDone=reps.filter(s=>s>=2).length;
+  document.getElementById('readout').innerHTML=
+    '<div class="stat hot"><div class="lbl">Phase 0 · front-load</div><div class="val">'+fDone+'<small>/'+FRONTLOAD.length+'</small></div></div>'
+   +'<div class="stat"><div class="lbl">Topics acquired</div><div class="val">'+bDone+'<small>/'+bTot+'</small></div></div>'
+   +'<div class="stat"><div class="lbl">Reps reviewed</div><div class="val">'+repDone+'<small>/'+PROBLEMS.length+'</small></div></div>'
+   +'<div class="stat hot"><div class="lbl">Problems solid</div><div class="val">'+solid+'<small>/'+PROBLEMS.length+'</small></div></div>';
+  document.querySelector('#bar-f i').style.width=pct(fDone,FRONTLOAD.length)+'%';
+  document.querySelector('#bar-b1 i').style.width=pct(bDone,bTot)+'%';
+  document.querySelector('#bar-p i').style.width=pct(repDone,PROBLEMS.length)+'%';
+}
+function renderAll(){renderFrontload();renderBuckets();renderProblems();renderReadout();}
+
+/* ---------------- events ---------------- */
+document.addEventListener('click',e=>{
+  const chk=e.target.closest('.chk');
+  if(chk){state.check[chk.dataset.cid]=!state.check[chk.dataset.cid];
+    save();renderFrontload();renderBuckets();renderReadout();return;}
+  const st=e.target.closest('.status');
+  if(st){const id=st.dataset.pid;state.prob[id].s=(state.prob[id].s+1)%4;
+    st.dataset.s=state.prob[id].s;st.textContent=STATUS[state.prob[id].s];save();renderReadout();return;}
+  const jb=e.target.closest('.jbtn');
+  if(jb){const w=document.getElementById('jw-'+jb.dataset.jid);
+    const open=w.classList.toggle('open');
+    jb.innerHTML=(open?'&#9662;':'&#9656;')+' journal';return;}
+  if(e.target.closest('#export')){exportBackup();return;}
+  if(e.target.closest('#importBtn')){document.getElementById('importFile').click();return;}
+  if(e.target.closest('#reset')){
+    if(confirm('Wipe all checkboxes, statuses and journal notes in this browser?')){
+      state={check:{},prob:{}};
+      PROBLEMS.forEach(p=>state.prob[p.id]={s:0,note:''});
+      save();renderAll();
+    }
+  }
+});
+document.addEventListener('input',e=>{
+  const ta=e.target.closest('textarea[data-nid]');
+  if(ta){state.prob[ta.dataset.nid].note=ta.value;save();}
+});
+document.getElementById('importFile').addEventListener('change',e=>{
+  if(e.target.files&&e.target.files[0])importBackup(e.target.files[0]);
+  e.target.value='';
+});
+
+/* ---------------- boot ---------------- */
+load();
+renderAll();
+if(!storeOK){
+  document.getElementById('storewarn').textContent='localStorage blocked here - progress is in-memory only. Use Export.';
+}
+</script>
+</body>
+</html>
